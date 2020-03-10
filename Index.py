@@ -1,6 +1,7 @@
 import requests
 from json import dump
 from json import loads
+import csv
 
 def run_query(json, headers): # A simple function to use requests.post to make the API call.
 
@@ -22,7 +23,25 @@ query example{
     nodes{
       ... on Repository{
         nameWithOwner
-        diskUsage
+        url
+        createdAt
+         primaryLanguage
+              {
+                name
+              }
+         totalIssues: issues
+              {
+                totalCount
+              }
+         releases
+              {
+                totalCount
+              }
+         updatedAt
+                closedIssues: issues(states:CLOSED)
+              {
+                totalCount
+              }   
       }
     }
   }
@@ -40,7 +59,7 @@ headers = {"Authorization": "Bearer " + token}
 
 total_pages = 1
 
-result = run_query(json, headers)
+result = run_query(json,headers)
 
 nodes = result['data']['search']['nodes']
 next_page  = result["data"]["search"]["pageInfo"]["hasNextPage"]
@@ -57,5 +76,30 @@ while (next_page and total_pages < 10):
 
 #saving data
 for node in nodes:
-    with open("C:/Users/PICHAU/PycharmProjects/Laboratorio6/dadosgit.csv", 'a') as the_file:
-        the_file.write("Nome do Repositorio: " + node['nameWithOwner'] + "\n" + "diskUsage: " + str(node['diskUsage']) + "\n")
+
+        with open("C:/Users/PICHAU/PycharmProjects/Laboratorio6/dadosgit.csv", 'w', newline='') as n_file:
+            fnames = [
+                'Nome;',
+                'URL;',
+                'Linguagem;',
+                'Releases;',
+                'Issues Fechadas;',
+                'Total de Issues;',
+                'Data de Criação;',
+                'Última Atualização;']
+
+            csv_writer = csv.DictWriter(n_file, fieldnames=fnames, dialect="excel-tab")
+            csv_writer.writeheader()
+            for node in nodes:
+                csv_writer.writerow(
+                    {
+                        'Nome;': "{};".format(node['nameWithOwner']),
+                        'URL;': "{};".format(node['url']),
+                        'Linguagem;': "{};".format(
+                            node['primaryLanguage']['name'] if node['primaryLanguage'] != None else 'null'),
+                        'Releases;': "{};".format(node['releases']['totalCount']),
+                        'Issues Fechadas;': "{};".format(node['closedIssues']['totalCount']),
+                        'Total de Issues;': "{};".format(node['totalIssues']['totalCount']),
+                        'Data de Criação;': "{};".format(node['createdAt']),
+                        'Última Atualização;': "{};".format(node['updatedAt'])
+                    })
